@@ -99,3 +99,4 @@ npm run dist         # empaqueta AppImage y .deb
 - **Orden global único.** Historias, tareas e incidencias comparten un campo
   `position` por proyecto, de modo que reordenar en el tablero respeta el orden del
   backlog y al revés.
+# Orbit
