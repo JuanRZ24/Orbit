@@ -1,0 +1,101 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-app: #0e1014;
+  --color-panel: #15181f;
+  --color-raise: #1b1f28;
+  --color-hover: #222733;
+  --color-line: #282d39;
+  --color-ink: #e7e9ee;
+  --color-dim: #9aa3b5;
+  --color-faint: #6b7385;
+  --color-brand: #6366f1;
+  --color-brand-soft: #312e81;
+
+  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+
+  --radius-xl2: 14px;
+}
+
+* { min-width: 0; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-app);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: color-mix(in srgb, var(--color-brand) 45%, transparent); }
+
+/* Barras de scroll discretas, al estilo de una app de escritorio */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #2f3542;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #414a5c; background-clip: content-box; }
+
+input, textarea, select, button { font: inherit; color: inherit; }
+input:focus, textarea:focus, select:focus { outline: none; }
+
+@layer components {
+  .card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-xl2);
+  }
+  .field {
+    width: 100%;
+    background: var(--color-app);
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+    padding: 8px 10px;
+    transition: border-color .12s ease, box-shadow .12s ease;
+  }
+  .field:focus {
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 22%, transparent);
+  }
+  .field::placeholder { color: var(--color-faint); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 10px; padding: 7px 12px;
+    border: 1px solid var(--color-line);
+    background: var(--color-raise);
+    transition: background .12s ease, border-color .12s ease, opacity .12s ease;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--color-hover); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--color-brand);
+    border-color: var(--color-brand);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #7577f3; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-ghost:hover { background: var(--color-hover); }
+  .btn-danger { border-color: #7f1d1d; color: #fca5a5; background: transparent; }
+  .btn-danger:hover { background: #450a0a; }
+}
+
+/* Mientras se arrastra una tarjeta no queremos selección de texto */
+.dragging-active, .dragging-active * { user-select: none !important; }
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.pop-in { animation: pop-in .14s ease-out; }

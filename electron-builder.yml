@@ -1,0 +1,21 @@
+appId: com.juanrz.orbit
+productName: Orbit
+directories:
+  buildResources: build
+  output: release
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!release/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintrc,.gitignore,tsconfig*.json,README.md}'
+  - '!tests/*'
+  - '!build/make-icon.py'
+linux:
+  icon: build/icon.png
+  target:
+    - AppImage
+    - deb
+  category: Development
+  maintainer: juanrz24
+  synopsis: Gestor de proyectos personales estilo Taiga
