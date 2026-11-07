@@ -77,7 +77,7 @@ try {
   eq('al terminarla aparece la siguiente', hoy().tarea.title, 'Tarea dos')
 
   api['task.update'](t2.id, { statusId: cierre })
-  eq('sin tareas abiertas no hay nada en curso', hoy().tarea, null)
+  eq('cerradas las dos tareas, queda la historia que las contenía', hoy().tarea.title, 'Una historia')
 
   /* ------------------------------------------------ lo que no debe salir */
   const abierta = db.prepare(
@@ -95,6 +95,25 @@ try {
 
   api['project.update'](project.id, { archived: 0 })
   eq('y al restaurarlo vuelve', hoy().tarea.title, 'Tarea uno')
+
+  /* ------------------ sin bajar a tareas, lo en curso es la historia */
+  eq('mientras haya tarea, es la tarea', hoy().tarea.kind, 'task')
+  api['task.remove'](t1.id)
+  api['task.remove'](t2.id)
+
+  const historia = hoy().tarea
+  eq('sin ninguna tarea, sale la historia del sprint', historia.title, 'Una historia')
+  eq('y se distingue de una tarea', historia.kind, 'story')
+  eq('una historia no cuelga de otra', historia.storyTitle, null)
+  eq('con el sprint de la historia', historia.sprintName, 'Sprint 1')
+
+  const cierreHistoria = db.prepare(
+    "SELECT id FROM statuses WHERE projectId = ? AND kind = 'story' AND isClosed = 1 ORDER BY position LIMIT 1"
+  ).get(project.id).id
+  eq('y la columna de cierre de historias, no la de tareas', historia.closeStatusId, cierreHistoria)
+
+  api['story.update'](story.id, { statusId: cierreHistoria })
+  eq('al cerrar la historia no queda nada en curso', hoy().tarea, null)
 
   /* ------------------------------------------- Hoy no escribe nada */
   const antes = db.prepare('SELECT COALESCE(MAX(seq), 0) AS s FROM change_log').get().s

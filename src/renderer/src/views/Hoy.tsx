@@ -28,12 +28,14 @@ export function Hoy(): ReactNode {
   const terminarTarea = async (): Promise<void> => {
     const tarea = data?.tarea
     if (!tarea) return
+    const qué = tarea.kind === 'task' ? 'tareas' : 'historias'
     if (!tarea.closeStatusId) {
-      toast('error', `${tarea.projectName} no tiene ninguna columna de tareas marcada como de cierre`)
+      toast('error', `${tarea.projectName} no tiene ninguna columna de ${qué} marcada como de cierre`)
       return
     }
     setBusy(true)
-    await api.updateTask(tarea.id, { statusId: tarea.closeStatusId })
+    const cerrar = tarea.kind === 'task' ? api.updateTask : api.updateStory
+    await cerrar(tarea.id, { statusId: tarea.closeStatusId })
     load()
     // El proyecto abierto acaba de cambiar, así que el resto de la app también.
     if (currentId) await refresh()
@@ -83,7 +85,7 @@ export function Hoy(): ReactNode {
           <h2 className="mb-3 text-[14px] font-semibold">Del trabajo</h2>
           {!data.tarea ? (
             <p className="text-[12px] text-faint">
-              Ninguna tarea abierta en un sprint activo.
+              Nada abierto en un sprint activo.
             </p>
           ) : (
             <div className="rounded-lg border border-line bg-app/40 p-3">

@@ -219,6 +219,8 @@ export interface Pendiente {
 /* ---------------------------------------------------------------------- hoy */
 
 export interface TareaEnCurso {
+  /** Si el proyecto aún no baja a tareas, lo en curso es la propia historia. */
+  kind: 'task' | 'story'
   id: ID
   ref: number
   title: string
