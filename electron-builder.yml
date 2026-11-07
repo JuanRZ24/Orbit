@@ -10,7 +10,7 @@ files:
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintrc,.gitignore,tsconfig*.json,README.md}'
   - '!tests/*'
-  - '!build/make-icon.py'
+  - '!build/make-icon.mjs'
 linux:
   icon: build/icon.png
   target:

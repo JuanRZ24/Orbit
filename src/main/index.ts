@@ -36,6 +36,9 @@ function createWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: '#0f1115',
     title: 'Orbit',
+    // Sirve igual compilado que empaquetado: en los dos casos el icono queda
+    // dos niveles por encima de out/main.
+    icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
