@@ -1,6 +1,7 @@
-import { app, shell, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Menu, dialog, nativeTheme, screen } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
+import { DEFAULT_SIZE, fitToScreen, MIN_SIZE, type SavedBounds } from './bounds'
 import { closeDatabase, getMeta, setMeta } from '../core/db'
 import { api, openOrbit, type ApiMethod } from '../core/modules/registry'
 import {
@@ -10,21 +11,27 @@ import {
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
-  const saved = (() => {
+  const saved = ((): SavedBounds => {
     try {
-      return JSON.parse(getMeta('windowBounds') ?? '{}') as { width?: number; height?: number; x?: number; y?: number }
+      return JSON.parse(getMeta('windowBounds') ?? '{}') as SavedBounds
     } catch {
       return {}
     }
   })()
 
+  // La pantalla donde va a salir, que no tiene por qué ser la de la última vez.
+  const area = (typeof saved.x === 'number' && typeof saved.y === 'number'
+    ? screen.getDisplayMatching({
+      x: saved.x, y: saved.y,
+      width: saved.width ?? DEFAULT_SIZE.width,
+      height: saved.height ?? DEFAULT_SIZE.height
+    })
+    : screen.getPrimaryDisplay()).workArea
+
   mainWindow = new BrowserWindow({
-    width: saved.width ?? 1440,
-    height: saved.height ?? 900,
-    x: saved.x,
-    y: saved.y,
-    minWidth: 900,
-    minHeight: 620,
+    ...fitToScreen(saved, area),
+    minWidth: MIN_SIZE.width,
+    minHeight: MIN_SIZE.height,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#0f1115',
@@ -52,13 +59,19 @@ function createWindow(): void {
     }
   })
 
+  // `getNormalBounds` da el tamaño sin maximizar, que es justo lo que hay que
+  // recordar; que estuviera maximizada se guarda aparte.
   const persistBounds = (): void => {
     if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMinimized()) return
     setMeta('windowBounds', JSON.stringify(mainWindow.getNormalBounds()))
   }
   mainWindow.on('resized', persistBounds)
   mainWindow.on('moved', persistBounds)
+  mainWindow.on('maximize', () => setMeta('windowMaximized', '1'))
+  mainWindow.on('unmaximize', () => setMeta('windowMaximized', '0'))
   mainWindow.on('closed', () => { mainWindow = null })
+
+  if (getMeta('windowMaximized') === '1') mainWindow.maximize()
   // Al volver a la ventana, mirar si hay algo nuevo en el servidor.
   mainWindow.on('focus', () => void syncNow())
 
@@ -107,7 +120,9 @@ function buildMenu(): void {
     {
       label: 'Ver',
       submenu: [
-        { label: 'Hoy', accelerator: 'CmdOrCtrl+H', click: () => emit('view', 'hoy') },
+        { label: 'Hoy', accelerator: 'CmdOrCtrl+H', click: () => emit('module', 'hoy') },
+        { label: 'Pendientes', accelerator: 'CmdOrCtrl+P', click: () => emit('module', 'pendientes') },
+        { label: 'Proyectos', click: () => emit('module', 'proyectos') },
         { type: 'separator' },
         { label: 'Resumen', accelerator: 'CmdOrCtrl+1', click: () => emit('view', 'dashboard') },
         { label: 'Backlog', accelerator: 'CmdOrCtrl+2', click: () => emit('view', 'backlog') },

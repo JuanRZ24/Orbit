@@ -17,7 +17,8 @@ export default defineConfig({
           replication: resolve(__dirname, 'src/core/replication.ts'),
           sync: resolve(__dirname, 'src/core/sync.ts'),
           client: resolve(__dirname, 'src/core/client.ts'),
-          desktopSync: resolve(__dirname, 'src/main/sync.ts')
+          desktopSync: resolve(__dirname, 'src/main/sync.ts'),
+          bounds: resolve(__dirname, 'src/main/bounds.ts')
         }
       }
     }

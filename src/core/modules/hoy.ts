@@ -39,6 +39,10 @@ export const api = {
     return {
       pendientes: db.prepare('SELECT * FROM pendientes WHERE done = 0 ORDER BY position LIMIT ?')
         .all(CUANTOS) as unknown as Pendiente[],
+      restantes: Math.max(
+        0,
+        (db.prepare('SELECT count(*) AS n FROM pendientes WHERE done = 0').get() as { n: number }).n - CUANTOS
+      ),
       tarea: (db.prepare(TAREA).get() as unknown as TareaEnCurso | undefined) ?? null
     }
   }

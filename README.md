@@ -15,6 +15,7 @@ Sin servidor configurado, Orbit es exactamente lo que era, en local y sin cuenta
 | Zona | Qué puedes hacer |
 | --- | --- |
 | **Hoy** | Dos pendientes de vida y la tarea en curso. Al terminar una, aparece la siguiente. |
+| **Pendientes** | La lista entera de cosas de la vida: añadir, marcar hecho, borrar. |
 | **Resumen** | Métricas del proyecto, burndown del sprint activo, vencimientos, items bloqueados y actividad reciente. |
 | **Backlog** | Lista ordenable de historias y panel de sprints. Arrastra historias al sprint, estima con la escala Fibonacci, filtra por texto, épica o etiqueta. |
 | **Sprint** | Taskboard de verdad: filas por historia, columnas por estado de tarea, arrastre entre celdas, burndown y cierre de sprint. |
@@ -58,6 +59,7 @@ Para copia de seguridad basta con guardar ese fichero o exportar el JSON.
 | `Ctrl+N` | Nueva historia |
 | `Ctrl+Shift+N` | Nuevo proyecto |
 | `Ctrl+H` | Ir a Hoy |
+| `Ctrl+P` | Ir a Pendientes |
 | `Ctrl+1…7` | Cambiar de vista del proyecto |
 | `Ctrl+B` | Mostrar u ocultar el panel lateral |
 | `?` | Ver todos los atajos |
@@ -91,7 +93,7 @@ src/
   renderer/src/
     store/             estado global (zustand)
     components/        primitivas, tablero DnD, diálogo de item, paleta
-    views/             una por pestaña
+    views/             una por pestaña, más Hoy y Pendientes
 tests/
   boundaries.mjs       que las capas no se mezclen
   smoke.mjs            la capa de datos
@@ -113,6 +115,20 @@ de dominio corra igual en la aplicación y en el servidor. `tests/boundaries.mjs
 lo comprueba, y `tests/server.mjs` lo demuestra arrancando el servidor con
 `node` a secas.
 
+## Módulos
+
+La aplicación se divide en módulos de primer nivel que no se mezclan entre sí:
+
+| Módulo | Qué es |
+| --- | --- |
+| **Hoy** (`Ctrl+H`) | Por dónde empezar: dos pendientes y la tarea en curso |
+| **Proyectos** (`Ctrl+1`) | Todo lo de Taiga: backlog, sprints, tablero, incidencias, épicas y wiki |
+| **Pendientes** (`Ctrl+P`) | La lista de cosas de la vida, que no cuelgan de ningún proyecto |
+
+El selector de proyecto y sus siete vistas solo existen dentro de **Proyectos**;
+desde Hoy o Pendientes no estorban. Los pendientes se añaden desde la propia
+aplicación o desde el atajo del móvil: es la misma lista.
+
 ## Hoy
 
 La pantalla con la que se empieza el día: **dos** pendientes de vida y **una**
@@ -126,7 +142,7 @@ creación. Marcarla hecha la pasa a la primera columna de cierre de su proyecto;
 si el proyecto no tiene ninguna, la pantalla lo dice en vez de callarse.
 
 El módulo `hoy` no tiene tablas ni escribe nada: es una consulta derivada sobre
-lo que ya hay. Los pendientes se añaden desde el atajo del móvil.
+lo que ya hay.
 
 ## Servidor
 

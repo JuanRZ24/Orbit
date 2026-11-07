@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Search, ListTodo, Bug, Layers, BookText, CornerDownLeft, LayoutDashboard,
-  Rocket, Columns3, Settings, FolderOpen
+  Rocket, Columns3, Settings, FolderOpen, Sun, CheckSquare
 } from 'lucide-react'
 import { api, type SearchHit } from '../lib/api'
-import { useStore, type ViewName } from '../store/useStore'
+import { useStore, type ModuleName, type ViewName } from '../store/useStore'
 import { cn, refLabel } from '../lib/ui'
 import { Dot } from './ui'
 
@@ -28,11 +28,12 @@ const KIND_ICON: Record<SearchHit['kind'], ReactNode> = {
 const VIEW_ICON: Record<string, ReactNode> = {
   dashboard: <LayoutDashboard size={15} />, backlog: <ListTodo size={15} />, sprint: <Rocket size={15} />,
   kanban: <Columns3 size={15} />, issues: <Bug size={15} />, epics: <Layers size={15} />,
-  wiki: <BookText size={15} />, settings: <Settings size={15} />
+  wiki: <BookText size={15} />, ajustes: <Settings size={15} />,
+  hoy: <Sun size={15} />, pendientes: <CheckSquare size={15} />
 }
 
 export function CommandPalette(): ReactNode {
-  const { paletteOpen, setPalette, projects, currentId, selectProject, setView, setOpenItem, snap } = useStore()
+  const { paletteOpen, setPalette, projects, currentId, selectProject, setModule, setView, setOpenItem, snap } = useStore()
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<SearchHit[]>([])
   const [cursor, setCursor] = useState(0)
@@ -55,9 +56,15 @@ export function CommandPalette(): ReactNode {
 
   const commands = useMemo<Command[]>(() => {
     const list: Command[] = []
+    const modulos: Array<[ModuleName, string]> = [
+      ['hoy', 'Hoy'], ['pendientes', 'Pendientes'], ['ajustes', 'Ajustes']
+    ]
+    for (const [module, label] of modulos) {
+      list.push({ id: `module:${module}`, label: `Ir a ${label}`, icon: VIEW_ICON[module], run: () => setModule(module) })
+    }
     const views: Array<[ViewName, string]> = [
       ['dashboard', 'Resumen'], ['backlog', 'Backlog'], ['sprint', 'Sprint'], ['kanban', 'Tablero'],
-      ['issues', 'Incidencias'], ['epics', 'Épicas'], ['wiki', 'Wiki'], ['settings', 'Ajustes del proyecto']
+      ['issues', 'Incidencias'], ['epics', 'Épicas'], ['wiki', 'Wiki']
     ]
     if (currentId) {
       for (const [view, label] of views) {
@@ -80,7 +87,7 @@ export function CommandPalette(): ReactNode {
     const q = query.trim().toLowerCase()
     if (!q) return list.slice(0, 8)
     return list.filter((c) => c.label.toLowerCase().includes(q)).slice(0, 6)
-  }, [projects, currentId, query, setView, selectProject])
+  }, [projects, currentId, query, setModule, setView, selectProject])
 
   const rows: Array<{ key: string; run: () => void; node: ReactNode }> = [
     ...commands.map((c) => ({

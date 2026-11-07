@@ -234,5 +234,7 @@ export interface TareaEnCurso {
 /** Lo único que hay que mirar al empezar el día. */
 export interface Hoy {
   pendientes: Pendiente[]
+  /** Los que están abiertos pero no caben hoy, para saber que hay cola. */
+  restantes: number
   tarea: TareaEnCurso | null
 }

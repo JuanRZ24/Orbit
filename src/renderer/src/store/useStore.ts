@@ -2,8 +2,11 @@ import { create } from 'zustand'
 import { api } from '../lib/api'
 import type { ID, ProjectSnapshot, ProjectSummary } from '../../../shared/types'
 
-export type ViewName =
-  | 'hoy' | 'dashboard' | 'backlog' | 'sprint' | 'kanban' | 'issues' | 'epics' | 'wiki' | 'settings'
+/** Los módulos de primer nivel. Entre ellos no se comparte nada. */
+export type ModuleName = 'hoy' | 'proyectos' | 'pendientes' | 'ajustes'
+
+/** Las vistas de dentro del módulo de proyectos. */
+export type ViewName = 'dashboard' | 'backlog' | 'sprint' | 'kanban' | 'issues' | 'epics' | 'wiki'
 
 export interface Toast {
   id: number
@@ -31,6 +34,7 @@ interface State {
   projects: ProjectSummary[]
   currentId: ID | null
   snap: ProjectSnapshot | null
+  module: ModuleName
   view: ViewName
   sprintId: ID | null
   /** Filtro propio del Tablero: '__all__', '__backlog__' o el id de un sprint. */
@@ -48,6 +52,7 @@ interface State {
   selectProject: (id: ID | null) => Promise<void>
   refresh: () => Promise<void>
   run: <T>(action: () => Promise<T>, message?: string) => Promise<T | undefined>
+  setModule: (module: ModuleName) => void
   setView: (view: ViewName) => void
   setSprint: (id: ID | null) => void
   setBoardSprint: (value: string) => void
@@ -69,6 +74,7 @@ export const useStore = create<State>((set, get) => ({
   projects: [],
   currentId: null,
   snap: null,
+  module: 'hoy',
   view: 'dashboard',
   sprintId: null,
   boardSprint: '__all__',
@@ -141,7 +147,10 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  setView: (view) => set({ view }),
+  setModule: (module) => set({ module }),
+  // Ir a una vista de proyecto implica estar en ese módulo: así los saltos que
+  // ya existían (desde el Resumen, la paleta, el backlog) siguen funcionando.
+  setView: (view) => set({ view, module: 'proyectos' }),
   setSprint: (sprintId) => set({ sprintId }),
   setBoardSprint: (boardSprint) => set({ boardSprint }),
   setOpenItem: (openItem) => set({ openItem }),

@@ -66,7 +66,10 @@ export const api = {
   removeTag: (projectId: ID, name: string) => call<void>('tag.remove', projectId, name),
 
   hoy: () => call<Hoy>('hoy.get'),
+  listPendientes: (includeDone?: boolean) => call<Pendiente[]>('pendiente.list', { includeDone }),
+  createPendiente: (texto: string) => call<Pendiente>('pendiente.create', { texto }),
   togglePendiente: (id: ID) => call<Pendiente | undefined>('pendiente.toggle', id),
+  removePendiente: (id: ID) => call<void>('pendiente.remove', id),
 
   search: (query: string, projectId?: ID) => call<SearchHit[]>('search', query, projectId)
 }

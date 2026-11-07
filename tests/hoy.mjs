@@ -29,6 +29,7 @@ const textos = () => hoy().pendientes.map((p) => p.texto)
 try {
   /* ---------------------------------------------------------- vacío */
   eq('sin nada, Hoy no trae pendientes', hoy().pendientes, [])
+  eq('ni cola esperando', hoy().restantes, 0)
   eq('ni tarea', hoy().tarea, null)
 
   /* ------------------------------------------------ dos, no más */
@@ -36,9 +37,11 @@ try {
   api['pendiente.create']({ texto: 'Dos' })
   api['pendiente.create']({ texto: 'Tres' })
   eq('solo caben dos en un día', textos(), ['Uno', 'Dos'])
+  eq('y avisa de los que esperan', hoy().restantes, 1)
 
   api['pendiente.toggle'](uno.id)
   eq('al terminar uno aparece el siguiente', textos(), ['Dos', 'Tres'])
+  eq('y la cola se vacía', hoy().restantes, 0)
 
   api['pendiente.toggle'](uno.id)
   eq('y si lo desmarco vuelve a su sitio', textos(), ['Uno', 'Dos'])

@@ -12,7 +12,7 @@
     "build": "electron-vite build",
     "build:server": "vite build -c vite.server.config.ts",
     "server": "npm run build:server && node out/server/index.js",
-    "test": "node tests/boundaries.mjs && electron-vite build && npm run build:server && electron tests/smoke.mjs && electron tests/replication.mjs && electron tests/sync.mjs && electron tests/desktop-sync.mjs && node tests/pendientes.mjs && node tests/hoy.mjs && node tests/server.mjs && node tests/client.mjs",
+    "test": "node tests/boundaries.mjs && electron-vite build && npm run build:server && electron tests/smoke.mjs && electron tests/replication.mjs && electron tests/sync.mjs && electron tests/desktop-sync.mjs && node tests/bounds.mjs && node tests/pendientes.mjs && node tests/hoy.mjs && node tests/server.mjs && node tests/client.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "icon": "python3 build/make-icon.py",
     "dist": "electron-vite build && electron-builder --linux",

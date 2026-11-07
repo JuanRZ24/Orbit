@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { PanelLeftOpen, Plus } from 'lucide-react'
 import { api } from './lib/api'
 import { cn } from './lib/ui'
-import { useStore, type ViewName } from './store/useStore'
+import { useStore, type ModuleName, type ViewName } from './store/useStore'
 import { Sidebar } from './components/Sidebar'
 import { Toasts } from './components/Toasts'
 import { CommandPalette } from './components/CommandPalette'
@@ -11,6 +11,7 @@ import { ProjectDialog } from './components/ProjectDialog'
 import { Modal } from './components/ui'
 import { Home } from './views/Home'
 import { Hoy } from './views/Hoy'
+import { Pendientes } from './views/Pendientes'
 import { Dashboard } from './views/Dashboard'
 import { Backlog } from './views/Backlog'
 import { Kanban } from './views/Kanban'
@@ -25,7 +26,8 @@ const SHORTCUTS: Array<[string, string]> = [
   ['Ctrl N', 'Nueva historia en el proyecto actual'],
   ['Ctrl Shift N', 'Nuevo proyecto'],
   ['Ctrl H', 'Ir a Hoy'],
-  ['Ctrl 1 … 7', 'Cambiar de vista del proyecto'],
+  ['Ctrl P', 'Ir a Pendientes'],
+  ['Ctrl 1 … 7', 'Vistas del proyecto'],
   ['Ctrl B', 'Mostrar u ocultar el panel lateral'],
   ['Esc', 'Cerrar el diálogo abierto'],
   ['Doble clic', 'Editar un título en el sitio'],
@@ -83,18 +85,15 @@ function QuickStory({ open, onClose }: { open: boolean; onClose: () => void }): 
   )
 }
 
+/** Las vistas de dentro del módulo de proyectos. */
 const VIEWS: Record<ViewName, () => ReactNode> = {
-  hoy: Hoy,
   dashboard: Dashboard, backlog: Backlog, sprint: SprintView, kanban: Kanban,
-  issues: Issues, epics: Epics, wiki: Wiki, settings: Settings
+  issues: Issues, epics: Epics, wiki: Wiki
 }
-
-/** Vistas que no son de un proyecto: se ven aunque no haya ninguno abierto. */
-const GLOBALES: ViewName[] = ['hoy', 'settings']
 
 export default function App(): ReactNode {
   const {
-    ready, init, currentId, view, setView, setPalette, setShortcuts, sidebarOpen,
+    ready, init, currentId, module, setModule, view, setView, setPalette, setShortcuts, sidebarOpen,
     toggleSidebar, refresh, toast, openItem, paletteOpen, shortcutsOpen
   } = useStore()
   const [newProject, setNewProject] = useState(false)
@@ -109,7 +108,9 @@ export default function App(): ReactNode {
     const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true); return }
     if (mod && e.key.toLowerCase() === 'b' && !typing) { e.preventDefault(); toggleSidebar(); return }
-    if (mod && e.key.toLowerCase() === 'h' && !typing) { e.preventDefault(); setView('hoy'); return }
+    if (mod && e.key.toLowerCase() === 'h' && !typing) { e.preventDefault(); setModule('hoy'); return }
+    // preventDefault también evita que Chromium abra su diálogo de impresión.
+    if (mod && e.key.toLowerCase() === 'p' && !typing) { e.preventDefault(); setModule('pendientes'); return }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); setNewProject(true); return }
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'n' && currentId) { e.preventDefault(); setQuickStory(true); return }
     if (mod && !typing && /^[1-7]$/.test(e.key) && currentId) {
@@ -118,7 +119,7 @@ export default function App(): ReactNode {
       setView(order[Number(e.key) - 1])
     }
     if (e.key === '?' && !typing && !anyDialogOpen) { e.preventDefault(); setShortcuts(true) }
-  }, [currentId, setPalette, setShortcuts, setView, toggleSidebar, anyDialogOpen])
+  }, [currentId, setPalette, setShortcuts, setModule, setView, toggleSidebar, anyDialogOpen])
 
   useEffect(() => {
     window.addEventListener('keydown', onKey)
@@ -129,6 +130,7 @@ export default function App(): ReactNode {
     return window.orbit.onMenu(({ channel, payload }) => {
       switch (channel) {
         case 'view': setView(payload as ViewName); break
+        case 'module': setModule(payload as ModuleName); break
         case 'search.open': setPalette(true); break
         case 'project.new': setNewProject(true); break
         case 'story.new': if (useStore.getState().currentId) setQuickStory(true); break
@@ -141,7 +143,7 @@ export default function App(): ReactNode {
         }
       }
     })
-  }, [setView, setPalette, setShortcuts, toast, refresh])
+  }, [setModule, setView, setPalette, setShortcuts, toast, refresh])
 
   if (!ready) {
     return (
@@ -154,7 +156,11 @@ export default function App(): ReactNode {
     )
   }
 
-  const Current = currentId || GLOBALES.includes(view) ? VIEWS[view] : Home
+  const Current =
+    module === 'hoy' ? Hoy
+      : module === 'pendientes' ? Pendientes
+        : module === 'ajustes' ? Settings
+          : currentId ? VIEWS[view] : Home
 
   return (
     <div className="flex h-full overflow-hidden">

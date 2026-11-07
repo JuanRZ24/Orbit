@@ -11,7 +11,7 @@ import { refLabel } from '../lib/ui'
  * siguiente: no hay nada que paginar ni marcar, solo lo de ahora.
  */
 export function Hoy(): ReactNode {
-  const { toast, refresh, currentId } = useStore()
+  const { toast, refresh, currentId, setModule } = useStore()
   const [data, setData] = useState<HoyData | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -50,7 +50,10 @@ export function Hoy(): ReactNode {
           <h2 className="mb-3 text-[14px] font-semibold">De la vida</h2>
           {data.pendientes.length === 0 ? (
             <p className="text-[12px] text-faint">
-              Nada pendiente. Se añaden desde el atajo del móvil.
+              Nada pendiente.{' '}
+              <button className="text-dim underline hover:text-ink" onClick={() => setModule('pendientes')}>
+                Añadir en Pendientes
+              </button>
             </p>
           ) : (
             <ul className="space-y-1.5">
@@ -67,6 +70,12 @@ export function Hoy(): ReactNode {
                 </li>
               ))}
             </ul>
+          )}
+          {data.restantes > 0 && (
+            <button className="mt-2.5 text-[12px] text-faint hover:text-ink"
+              onClick={() => setModule('pendientes')}>
+              +{data.restantes} esperando en Pendientes
+            </button>
           )}
         </section>
 
