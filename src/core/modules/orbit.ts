@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { getDb } from './db'
+import { getDb } from '../db'
 import type {
   Activity, BurndownPoint, Comment, Epic, ID, Issue, ItemKind, Project, ProjectSnapshot,
   ProjectSummary, Sprint, Status, Story, Tag, Task, WikiPage
-} from '../shared/types'
+} from '../../shared/types'
 
 /* ------------------------------------------------------------------ utils */
 

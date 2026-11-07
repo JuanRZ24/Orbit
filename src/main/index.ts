@@ -1,8 +1,11 @@
 import { app, shell, BrowserWindow, ipcMain, Menu, dialog, nativeTheme } from 'electron'
 import { join } from 'node:path'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { openDatabase, closeDatabase, getMeta, setMeta } from './db'
-import { api, type ApiMethod } from './api'
+import { closeDatabase, getMeta, setMeta } from '../core/db'
+import { api, openOrbit, type ApiMethod } from '../core/modules/registry'
+import {
+  signIn, signOut, start as startSync, status as syncStatus, stop as stopSync, syncNow
+} from './sync'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -56,6 +59,8 @@ function createWindow(): void {
   mainWindow.on('resized', persistBounds)
   mainWindow.on('moved', persistBounds)
   mainWindow.on('closed', () => { mainWindow = null })
+  // Al volver a la ventana, mirar si hay algo nuevo en el servidor.
+  mainWindow.on('focus', () => void syncNow())
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) shell.openExternal(url)
@@ -102,6 +107,8 @@ function buildMenu(): void {
     {
       label: 'Ver',
       submenu: [
+        { label: 'Hoy', accelerator: 'CmdOrCtrl+H', click: () => emit('view', 'hoy') },
+        { type: 'separator' },
         { label: 'Resumen', accelerator: 'CmdOrCtrl+1', click: () => emit('view', 'dashboard') },
         { label: 'Backlog', accelerator: 'CmdOrCtrl+2', click: () => emit('view', 'backlog') },
         { label: 'Sprint', accelerator: 'CmdOrCtrl+3', click: () => emit('view', 'sprint') },
@@ -173,7 +180,7 @@ async function importData(): Promise<void> {
 
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark'
-  openDatabase(app.getPath('userData'))
+  openOrbit(app.getPath('userData'))
 
   ipcMain.handle('api', (_event, method: ApiMethod, args: unknown[]) => {
     const fn = api[method] as ((...a: unknown[]) => unknown) | undefined
@@ -190,8 +197,19 @@ app.whenReady().then(() => {
   ipcMain.handle('app.export', () => exportData())
   ipcMain.handle('app.import', () => importData())
 
+  ipcMain.handle('sync.status', () => syncStatus())
+  ipcMain.handle('sync.login', (_event, url: unknown, password: unknown) => signIn(url, password))
+  ipcMain.handle('sync.now', () => syncNow())
+  ipcMain.handle('sync.logout', () => {
+    signOut()
+    return syncStatus()
+  })
+
   buildMenu()
   createWindow()
+
+  // Si la sincronización trajo algo, el renderer recarga como tras una importación.
+  void startSync(() => emit('data.reload'))
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -202,4 +220,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => closeDatabase())
+app.on('before-quit', () => {
+  stopSync()
+  closeDatabase()
+})

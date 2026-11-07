@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { installReplication } from './replication'
 
 let db: DatabaseSync
 
@@ -180,13 +181,23 @@ CREATE TABLE IF NOT EXISTS sprint_history (
 );
 `
 
-export function openDatabase(userDataDir: string): DatabaseSync {
+/**
+ * `extraSchemas` son los que aportan los módulos. Se aplican antes de instalar
+ * la replicación, porque los triggers necesitan que las tablas ya existan.
+ * Lo normal es no llamar a esto directamente, sino a `openOrbit` del registro.
+ */
+export function openDatabase(userDataDir: string, extraSchemas: string[] = []): DatabaseSync {
   const file = join(userDataDir, 'orbit.db')
   if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true })
   db = new DatabaseSync(file)
   db.exec('PRAGMA journal_mode = WAL')
   db.exec('PRAGMA foreign_keys = ON')
+  // Un borrado en cascada tiene que disparar los triggers de replicación de los
+  // hijos, o el otro equipo se quedaría con filas huérfanas.
+  db.exec('PRAGMA recursive_triggers = ON')
   db.exec(SCHEMA)
+  for (const extra of extraSchemas) db.exec(extra)
+  installReplication(db)
   setMeta('schemaVersion', '1')
   return db
 }

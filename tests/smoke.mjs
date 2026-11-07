@@ -7,8 +7,18 @@ import { app } from 'electron'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { openDatabase, closeDatabase } from '../out/main/db.js'
-import { api } from '../out/main/api.js'
+import { closeDatabase } from '../out/main/db.js'
+import { api, openOrbit } from '../out/main/registry.js'
+
+// Sin esto una excepción no llamaría a app.exit y el test se colgaría para
+// siempre en vez de fallar, que es mucho peor que un fallo.
+const revienta = (error) => {
+  console.log(`
+  EXCEPCIÓN: ${error?.stack ?? error}`)
+  app.exit(1)
+}
+process.on('uncaughtException', revienta)
+process.on('unhandledRejection', revienta)
 
 let passed = 0
 const failures = []
@@ -23,7 +33,7 @@ const eq = (name, actual, expected) =>
 
 app.whenReady().then(() => {
   const dir = mkdtempSync(join(tmpdir(), 'orbit-smoke-'))
-  openDatabase(dir)
+  openOrbit(dir)
 
   /* -------------------------------------------------- proyectos y estados */
   const project = api['project.create']({ name: 'Mi App Nueva', description: 'test' })

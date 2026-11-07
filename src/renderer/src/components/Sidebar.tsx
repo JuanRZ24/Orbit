@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import {
-  LayoutDashboard, ListTodo, Rocket, Columns3, Bug, Layers, BookText, Settings,
+  Sun, LayoutDashboard, ListTodo, Rocket, Columns3, Bug, Layers, BookText, Settings,
   Plus, ChevronsUpDown, Search, Keyboard, FolderOpen, PanelLeftClose
 } from 'lucide-react'
 import { useStore, type ViewName } from '../store/useStore'
@@ -91,6 +91,15 @@ export function Sidebar({ onNewProject }: { onNewProject: () => void }): ReactNo
         <kbd className="rounded border border-line px-1 font-mono text-[10px]">Ctrl K</kbd>
       </button>
 
+      {/* Hoy no es de ningún proyecto, así que va fuera de la navegación de abajo. */}
+      <button onClick={() => setView('hoy')}
+        className={cn('mx-2 mb-2 flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors',
+          view === 'hoy' ? 'bg-brand/15 text-ink' : 'text-dim hover:bg-hover hover:text-ink')}>
+        <Sun size={16} className={view === 'hoy' ? 'text-brand' : 'text-faint'} />
+        <span className="flex-1 text-left">Hoy</span>
+        <kbd className="rounded border border-line px-1 font-mono text-[10px]">Ctrl H</kbd>
+      </button>
+
       <nav className="flex-1 overflow-y-auto px-2">
         {currentId ? (
           <>
@@ -128,14 +137,12 @@ export function Sidebar({ onNewProject }: { onNewProject: () => void }): ReactNo
       </nav>
 
       <div className="border-t border-line p-2">
-        {currentId && (
-          <button onClick={() => setView('settings')}
-            className={cn('mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors',
-              view === 'settings' ? 'bg-brand/15 text-ink' : 'text-dim hover:bg-hover hover:text-ink')}>
-            <Settings size={16} className={view === 'settings' ? 'text-brand' : 'text-faint'} />
-            <span className="flex-1 text-left">Ajustes del proyecto</span>
-          </button>
-        )}
+        <button onClick={() => setView('settings')}
+          className={cn('mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors',
+            view === 'settings' ? 'bg-brand/15 text-ink' : 'text-dim hover:bg-hover hover:text-ink')}>
+          <Settings size={16} className={view === 'settings' ? 'text-brand' : 'text-faint'} />
+          <span className="flex-1 text-left">{currentId ? 'Ajustes del proyecto' : 'Ajustes'}</span>
+        </button>
         <button onClick={() => setShortcuts(true)}
           className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-dim transition-colors hover:bg-hover hover:text-ink">
           <Keyboard size={16} className="text-faint" />

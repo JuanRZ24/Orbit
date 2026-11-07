@@ -1,5 +1,5 @@
 import type {
-  Activity, BurndownPoint, Comment, Project, ProjectSnapshot, ProjectSummary, ID
+  Activity, BurndownPoint, Comment, Hoy, Pendiente, Project, ProjectSnapshot, ProjectSummary, ID
 } from '../../../shared/types'
 
 export interface SearchHit {
@@ -64,6 +64,9 @@ export const api = {
 
   upsertTag: (projectId: ID, name: string, color: string) => call<void>('tag.upsert', projectId, name, color),
   removeTag: (projectId: ID, name: string) => call<void>('tag.remove', projectId, name),
+
+  hoy: () => call<Hoy>('hoy.get'),
+  togglePendiente: (id: ID) => call<Pendiente | undefined>('pendiente.toggle', id),
 
   search: (query: string, projectId?: ID) => call<SearchHit[]>('search', query, projectId)
 }

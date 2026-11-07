@@ -8,12 +8,16 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        // `api` y `db` salen como entradas propias para poder ejercitarlas
-        // desde los tests sin arrancar la aplicación entera.
+        // Las piezas de `src/core` salen como entradas propias para poder
+        // ejercitarlas desde los tests sin arrancar la aplicación entera.
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
-          api: resolve(__dirname, 'src/main/api.ts'),
-          db: resolve(__dirname, 'src/main/db.ts')
+          registry: resolve(__dirname, 'src/core/modules/registry.ts'),
+          db: resolve(__dirname, 'src/core/db.ts'),
+          replication: resolve(__dirname, 'src/core/replication.ts'),
+          sync: resolve(__dirname, 'src/core/sync.ts'),
+          client: resolve(__dirname, 'src/core/client.ts'),
+          desktopSync: resolve(__dirname, 'src/main/sync.ts')
         }
       }
     }

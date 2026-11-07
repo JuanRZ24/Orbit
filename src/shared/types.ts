@@ -202,3 +202,37 @@ export const PROJECT_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
   '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
 ]
+
+/* --------------------------------------------------------------- pendientes */
+
+/** Una cosa de la vida que no es de ningún proyecto. */
+export interface Pendiente {
+  id: ID
+  texto: string
+  done: number
+  position: number
+  createdAt: string
+  updatedAt: string
+  doneAt: string | null
+}
+
+/* ---------------------------------------------------------------------- hoy */
+
+export interface TareaEnCurso {
+  id: ID
+  ref: number
+  title: string
+  projectId: ID
+  projectName: string
+  projectPrefix: string
+  sprintName: string
+  storyTitle: string | null
+  /** La columna de cierre de su proyecto, para poder terminarla desde Hoy. */
+  closeStatusId: ID | null
+}
+
+/** Lo único que hay que mirar al empezar el día. */
+export interface Hoy {
+  pendientes: Pendiente[]
+  tarea: TareaEnCurso | null
+}

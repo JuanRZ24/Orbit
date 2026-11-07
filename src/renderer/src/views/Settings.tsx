@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import {
-  Plus, Trash2, GripVertical, Check, Download, Upload, FolderOpen, Archive, Pencil
+  Plus, Trash2, GripVertical, Check, Download, Upload, FolderOpen, Archive, Pencil,
+  Cloud, CloudOff, RefreshCw, LogOut, AlertTriangle
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useStore } from '../store/useStore'
 import type { ItemKind, Status } from '../../../shared/types'
-import { KIND_LABEL, TAG_PALETTE, cn } from '../lib/ui'
+import type { SyncStatus } from '../../../shared/sync'
+import { KIND_LABEL, TAG_PALETTE, cn, formatRelative } from '../lib/ui'
 import { Page } from '../components/Page'
 import { Confirm, Dropdown, Labeled, MenuItem, Select } from '../components/ui'
 import { ProjectDialog } from '../components/ProjectDialog'
@@ -114,6 +116,103 @@ function StatusEditor({ kind }: { kind: ItemKind }): ReactNode {
   )
 }
 
+/** La cuenta del servidor y el estado de la sincronización. */
+function ServerSection(): ReactNode {
+  const { toast } = useStore()
+  const [status, setStatus] = useState<SyncStatus | null>(null)
+  const [url, setUrl] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const refresh = (): void => { void window.orbit.sync.status().then(setStatus) }
+  useEffect(refresh, [])
+
+  const entrar = async (event: FormEvent): Promise<void> => {
+    event.preventDefault()
+    setBusy(true)
+    const outcome = await window.orbit.sync.login(url.trim(), password)
+    // La contraseña no se queda ni en el estado de React: solo sirvió para el token.
+    setPassword('')
+    setBusy(false)
+    refresh()
+    if (outcome.ok) toast('ok', 'Conectado al servidor')
+    else toast('error', outcome.error ?? 'No se pudo entrar')
+  }
+
+  const sincronizar = async (): Promise<void> => {
+    setBusy(true)
+    const outcome = await window.orbit.sync.now()
+    setBusy(false)
+    refresh()
+    if (!outcome.ok) {
+      toast('error', outcome.error ?? 'Falló la sincronización')
+      return
+    }
+    const r = outcome.result
+    toast('ok', r && (r.pushed || r.applied) ? `Enviados ${r.pushed}, recibidos ${r.applied}` : 'Todo al día')
+  }
+
+  const salir = async (): Promise<void> => {
+    setStatus(await window.orbit.sync.logout())
+    toast('info', 'Este equipo se desconectó del servidor')
+  }
+
+  return (
+    <section className="card p-4">
+      <h2 className="mb-1 flex items-center gap-2 text-[14px] font-semibold">
+        {status?.configured
+          ? <Cloud size={15} className="text-faint" />
+          : <CloudOff size={15} className="text-faint" />}
+        Servidor
+      </h2>
+      <p className="mb-3 text-[12px] text-faint">
+        Sin servidor, Orbit trabaja solo en este equipo. Con servidor, cada equipo sigue
+        teniendo su propia base local y los cambios se reconcilian cuando hay red.
+      </p>
+
+      {status?.configured ? (
+        <>
+          <dl className="mb-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+            <dt className="text-faint">Dirección</dt>
+            <dd className="truncate font-mono text-[11px]">{status.url}</dd>
+            <dt className="text-faint">Última vez</dt>
+            <dd>{status.lastAt ? formatRelative(status.lastAt) : 'todavía nunca'}</dd>
+          </dl>
+          {status.lastError && <p className="mb-3 text-[12px] text-red-300">{status.lastError}</p>}
+          {!status.tokenEncrypted && (
+            <p className="mb-3 flex items-start gap-1.5 text-[12px] text-amber-300">
+              <AlertTriangle size={14} className="mt-px shrink-0" />
+              Este sistema no trae llavero, así que el token queda en claro en la base local.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button className="btn" disabled={busy} onClick={() => void sincronizar()}>
+              <RefreshCw size={14} className="text-faint" /> Sincronizar ahora
+            </button>
+            <button className="btn" disabled={busy} onClick={() => void salir()}>
+              <LogOut size={14} className="text-faint" /> Desconectar
+            </button>
+          </div>
+        </>
+      ) : (
+        <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => void entrar(e)}>
+          <Labeled label="Dirección" className="min-w-64 flex-1">
+            <input className="field" placeholder="https://orbit.midominio.dev"
+              value={url} onChange={(e) => setUrl(e.target.value)} />
+          </Labeled>
+          <Labeled label="Contraseña" className="min-w-44 flex-1">
+            <input className="field" type="password" value={password}
+              onChange={(e) => setPassword(e.target.value)} />
+          </Labeled>
+          <button className="btn btn-primary" type="submit" disabled={busy || !url.trim() || !password}>
+            Entrar
+          </button>
+        </form>
+      )}
+    </section>
+  )
+}
+
 export function Settings(): ReactNode {
   const { snap, run, selectProject, loadProjects, toast } = useStore()
   const [editProject, setEditProject] = useState(false)
@@ -124,7 +223,15 @@ export function Settings(): ReactNode {
     void window.orbit.info().then(setInfo)
   }, [])
 
-  if (!snap) return null
+  // Sin proyecto todavía no hay nada que ajustar, pero el servidor se configura
+  // igual: si no, en una instalación nueva no habría por dónde entrar.
+  if (!snap) {
+    return (
+      <Page title="Ajustes">
+        <div className="max-w-4xl"><ServerSection /></div>
+      </Page>
+    )
+  }
   const { project, tags, stories, tasks, issues, wiki } = snap
 
   return (
@@ -188,7 +295,8 @@ export function Settings(): ReactNode {
         <section className="card p-4">
           <h2 className="mb-1 text-[14px] font-semibold">Datos</h2>
           <p className="mb-3 text-[12px] text-faint">
-            Todo se guarda en una base SQLite local. No sale nada de este ordenador.
+            Todo se guarda en una base SQLite local. Si no hay servidor configurado,
+            no sale nada de este ordenador.
           </p>
           <div className="flex flex-wrap gap-2">
             <button className="btn" onClick={() => void window.orbit.exportData()}>
@@ -208,6 +316,8 @@ export function Settings(): ReactNode {
           </div>
           {info && <p className="mt-2 font-mono text-[11px] text-faint">{info.dataPath}/orbit.db</p>}
         </section>
+
+        <ServerSection />
 
         <section className="card border-red-900/50 p-4">
           <h2 className="mb-1 text-[14px] font-semibold text-red-300">Zona peligrosa</h2>

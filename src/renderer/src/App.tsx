@@ -10,6 +10,7 @@ import { ItemDialog } from './components/ItemDialog'
 import { ProjectDialog } from './components/ProjectDialog'
 import { Modal } from './components/ui'
 import { Home } from './views/Home'
+import { Hoy } from './views/Hoy'
 import { Dashboard } from './views/Dashboard'
 import { Backlog } from './views/Backlog'
 import { Kanban } from './views/Kanban'
@@ -23,7 +24,8 @@ const SHORTCUTS: Array<[string, string]> = [
   ['Ctrl K', 'Buscar en todo / paleta de comandos'],
   ['Ctrl N', 'Nueva historia en el proyecto actual'],
   ['Ctrl Shift N', 'Nuevo proyecto'],
-  ['Ctrl 1 … 7', 'Cambiar de vista'],
+  ['Ctrl H', 'Ir a Hoy'],
+  ['Ctrl 1 … 7', 'Cambiar de vista del proyecto'],
   ['Ctrl B', 'Mostrar u ocultar el panel lateral'],
   ['Esc', 'Cerrar el diálogo abierto'],
   ['Doble clic', 'Editar un título en el sitio'],
@@ -82,9 +84,13 @@ function QuickStory({ open, onClose }: { open: boolean; onClose: () => void }): 
 }
 
 const VIEWS: Record<ViewName, () => ReactNode> = {
+  hoy: Hoy,
   dashboard: Dashboard, backlog: Backlog, sprint: SprintView, kanban: Kanban,
   issues: Issues, epics: Epics, wiki: Wiki, settings: Settings
 }
+
+/** Vistas que no son de un proyecto: se ven aunque no haya ninguno abierto. */
+const GLOBALES: ViewName[] = ['hoy', 'settings']
 
 export default function App(): ReactNode {
   const {
@@ -103,6 +109,7 @@ export default function App(): ReactNode {
     const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette(true); return }
     if (mod && e.key.toLowerCase() === 'b' && !typing) { e.preventDefault(); toggleSidebar(); return }
+    if (mod && e.key.toLowerCase() === 'h' && !typing) { e.preventDefault(); setView('hoy'); return }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); setNewProject(true); return }
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'n' && currentId) { e.preventDefault(); setQuickStory(true); return }
     if (mod && !typing && /^[1-7]$/.test(e.key) && currentId) {
@@ -147,7 +154,7 @@ export default function App(): ReactNode {
     )
   }
 
-  const Current = currentId ? VIEWS[view] : Home
+  const Current = currentId || GLOBALES.includes(view) ? VIEWS[view] : Home
 
   return (
     <div className="flex h-full overflow-hidden">

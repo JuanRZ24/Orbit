@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { api } from './api'
+import { api } from '../core/modules/registry'
 
 /**
  * Utilidades sólo para desarrollo: se cargan con import() dinámico y únicamente

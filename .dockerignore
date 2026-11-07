@@ -1,0 +1,11 @@
+.git
+node_modules
+out
+release
+dist
+docs
+build
+tests
+.env
+*.log
+*.tsbuildinfo

@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { api } from '../lib/api'
 import type { ID, ProjectSnapshot, ProjectSummary } from '../../../shared/types'
 
-export type ViewName = 'dashboard' | 'backlog' | 'sprint' | 'kanban' | 'issues' | 'epics' | 'wiki' | 'settings'
+export type ViewName =
+  | 'hoy' | 'dashboard' | 'backlog' | 'sprint' | 'kanban' | 'issues' | 'epics' | 'wiki' | 'settings'
 
 export interface Toast {
   id: number
