@@ -129,7 +129,65 @@ app.whenReady().then(() => {
   api['project.create']({ name: 'Otro' })
   check('lo nuevo vuelve a aparecer como pendiente', pendingChanges(db, 100).length > 0)
 
+  /* --------------------------------- lo que ya estaba antes de los triggers */
+  // Una base que se usó antes de que existiera la replicación: si al abrirla
+  // no se volcara al diario, sus proyectos no viajarían nunca, y al editar un
+  // hijo suyo el servidor reventaría por clave ajena.
   closeDatabase()
+  const viejo = mkdtempSync(join(tmpdir(), 'orbit-viejo-'))
+  openOrbit(viejo)
+  const antiguo = api['project.create']({ name: 'De antes' })
+  api['story.create']({ projectId: antiguo.id, title: 'Historia de antes' })
+
+  const sinTriggers = getDb()
+  for (const tabla of Object.keys(REPLICATED)) {
+    for (const sufijo of ['ai', 'au', 'ad']) sinTriggers.exec(`DROP TRIGGER IF EXISTS cl_${tabla}_${sufijo}`)
+  }
+  sinTriggers.exec("DELETE FROM change_log; DELETE FROM row_version; DELETE FROM sync_state WHERE key = 'backfilled'")
+  closeDatabase()
+
+  openOrbit(viejo)
+  const volcado = pendingChanges(getDb(), 5000)
+  check('una base anterior a la replicación se vuelca entera', volcado.length > 0)
+  eq('con su proyecto', of(volcado, 'projects').length, 1)
+  eq('y su historia', of(volcado, 'stories').length, 1)
+  check('los padres van antes que los hijos',
+    volcado.findIndex((c) => c.tbl === 'projects') < volcado.findIndex((c) => c.tbl === 'stories'))
+  eq('el payload viaja completo', JSON.parse(of(volcado, 'projects')[0].payload).name, 'De antes')
+  eq('y row_version queda al día',
+    getDb().prepare('SELECT count(*) AS n FROM row_version').get().n, volcado.length)
+  eq('ninguna fila sin origen',
+    getDb().prepare("SELECT count(*) AS n FROM row_version WHERE origin = ''").get().n, 0)
+
+  closeDatabase()
+  openOrbit(viejo)
+  eq('y abrirla otra vez no lo duplica', pendingChanges(getDb(), 5000).length, volcado.length)
+
+  /* ------------------- una cola a medias, que es el caso que se dio de verdad */
+  // Si los triggers llevaban un rato grabando hijos sueltos, esos upserts en
+  // cola tienen seq más bajo que el volcado y se irían en un lote anterior al
+  // de sus padres. El volcado los repite, así que sobran.
+  const aMedias = getDb()
+  aMedias.exec("DELETE FROM change_log; DELETE FROM sync_state WHERE key = 'backfilled'")
+  aMedias.exec(
+    "INSERT INTO change_log (tbl, rowId, op, payload, ts) " +
+    "SELECT 'stories', id, 'upsert', json_object('id', id), '2020-01-01T00:00:00.000Z' FROM stories;" +
+    "INSERT INTO change_log (tbl, rowId, op, payload, ts) " +
+    "VALUES ('stories', 'fantasma', 'delete', NULL, '2020-01-01T00:00:00.000Z')"
+  )
+  closeDatabase()
+
+  openOrbit(viejo)
+  const recuperado = pendingChanges(getDb(), 5000)
+  const primeraTabla = recuperado.find((c) => c.op === 'upsert').tbl
+  eq('el volcado deja el proyecto por delante de todo', primeraTabla, 'projects')
+  eq('y no quedan los upserts huérfanos de antes',
+    recuperado.filter((c) => c.op === 'upsert' && c.ts.startsWith('2020')).length, 0)
+  eq('pero el borrado en cola se respeta',
+    recuperado.filter((c) => c.op === 'delete' && c.rowId === 'fantasma').length, 1)
+
+  closeDatabase()
+  rmSync(viejo, { recursive: true, force: true })
   rmSync(dir, { recursive: true, force: true })
 
   console.log(`\n  ${passed} comprobaciones correctas`)

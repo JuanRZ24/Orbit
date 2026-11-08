@@ -138,12 +138,15 @@ const touch = (table: string, id: string): string => `
   VALUES ('${table}', ${id}, ${STAMP}, ${LOCAL})
   ON CONFLICT(tbl, rowId) DO UPDATE SET ts = excluded.ts, origin = excluded.origin;`
 
-/** Identificador de fila: la llave, o sus partes unidas por un separador. */
-const rowId = (alias: 'new' | 'old', key: string[]): string =>
-  key.map((k) => `${alias}.${k}`).join(' || char(31) || ')
+/**
+ * Identificador de fila: la llave, o sus partes unidas por un separador. Sin
+ * alias es la propia tabla, que es como lo necesita el volcado inicial.
+ */
+const rowId = (alias: 'new' | 'old' | null, key: string[]): string =>
+  key.map((k) => (alias ? `${alias}.${k}` : k)).join(' || char(31) || ')
 
-const payload = (columns: string[]): string =>
-  `json_object(${columns.map((c) => `'${c}', new.${c}`).join(', ')})`
+const payload = (columns: string[], alias: 'new' | null = 'new'): string =>
+  `json_object(${columns.map((c) => `'${c}', ${alias ? `${alias}.${c}` : c}`).join(', ')})`
 
 /**
  * Los tres triggers de una tabla. El de UPDATE registra la llave nueva; en las
@@ -190,12 +193,53 @@ export interface Change {
   ts: string
 }
 
+/**
+ * Mete en el diario lo que ya estaba en la base antes de que existieran los
+ * triggers.
+ *
+ * Sin esto, una base con años de proyectos dentro se sincronizaría como si
+ * estuviera vacía: los triggers solo ven lo que pasa a partir de su creación.
+ * Y es peor que perder datos en silencio — al editar una historia vieja se
+ * empujaría al servidor una fila cuyo proyecto nunca viajó, y la clave ajena
+ * revienta allí, dejando la sincronización atascada para siempre.
+ *
+ * Las tablas se recorren en el orden de `REPLICATED`, que va de padres a
+ * hijos, así que el `seq` del diario ya sale en orden de dependencia.
+ *
+ * Los upserts que estaban en cola se tiran antes: el volcado es la foto
+ * completa de la base ahora mismo, así que los repite todos, y si se dejaran
+ * tendrían un `seq` más bajo y se enviarían en un lote anterior al de sus
+ * propios padres. Los borrados sí se quedan: de esos no hay fila que volcar.
+ */
+function backfill(db: DatabaseSync): void {
+  db.exec("DELETE FROM change_log WHERE pushedAt IS NULL AND op = 'upsert'")
+  for (const [table, { key, columns }] of Object.entries(REPLICATED)) {
+    const id = rowId(null, key)
+    db.exec(`
+      INSERT INTO change_log (tbl, rowId, op, payload, ts)
+      SELECT '${table}', ${id}, 'upsert', ${payload(columns, null)}, ${STAMP} FROM ${table};
+
+      -- El WHERE no sobra: sin él, SQLite no sabe si el ON CONFLICT es del
+      -- SELECT o del INSERT, y se niega a analizar la sentencia.
+      INSERT INTO row_version (tbl, rowId, ts, origin)
+      SELECT '${table}', ${id}, ${STAMP}, ${LOCAL} FROM ${table} WHERE true
+      ON CONFLICT(tbl, rowId) DO UPDATE SET ts = excluded.ts, origin = excluded.origin;
+    `)
+  }
+}
+
 export function installReplication(db: DatabaseSync): void {
   db.exec(TABLES)
   for (const [table, spec] of Object.entries(REPLICATED)) db.exec(triggersFor(table, spec))
   if (!readState(db, 'deviceId')) writeState(db, 'deviceId', randomUUID())
   // Una caída a media aplicación no debe dejar los triggers mudos para siempre.
   writeState(db, 'applying', '0')
+  // El volcado inicial va una sola vez, y después de fijar el deviceId: si no,
+  // `row_version` nacería con el origen en blanco.
+  if (!readState(db, 'backfilled')) {
+    backfill(db)
+    writeState(db, 'backfilled', '1')
+  }
 }
 
 export function readState(db: DatabaseSync, key: string): string | null {
