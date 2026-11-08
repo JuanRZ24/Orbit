@@ -11,6 +11,19 @@ files:
   - '!{.eslintrc,.gitignore,tsconfig*.json,README.md}'
   - '!tests/*'
   - '!build/make-icon.mjs'
+win:
+  # electron-builder saca el .ico del PNG porque es de 512; no hace falta otro.
+  icon: build/icon.png
+  target:
+    - nsis      # instalador, para la máquina donde lo usas a diario
+    - portable  # un .exe suelto, para llevarlo sin instalar
+
+nsis:
+  # Sin esto instala de golpe en AppData sin preguntar nada.
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Orbit
+
 linux:
   icon: build/icon.png
   target:

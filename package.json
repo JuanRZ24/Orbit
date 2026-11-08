@@ -17,7 +17,8 @@
     "icon": "node build/make-icon.mjs",
     "dist": "electron-vite build && electron-builder --linux",
     "dist:dir": "electron-vite build && electron-builder --linux --dir",
-    "electron:fetch": "node node_modules/electron/install.js"
+    "electron:fetch": "node node_modules/electron/install.js",
+    "dist:win": "electron-vite build && electron-builder --win"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
