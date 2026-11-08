@@ -54,7 +54,17 @@ async function post(url: string, body: unknown, token?: string): Promise<unknown
 
 /** Cambia contraseña por token. El token es lo único que se guarda después. */
 export async function login(url: string, password: string, device: string): Promise<string> {
-  const cuerpo = await post(`${base(url)}/api/login`, { password, device }) as { token?: unknown }
+  let cuerpo: { token?: unknown }
+  try {
+    cuerpo = await post(`${base(url)}/api/login`, { password, device }) as { token?: unknown }
+  } catch (error) {
+    // Aquí todavía no hay token: un 401 solo puede ser la contraseña, y decir
+    // «vuelve a entrar» a quien está entrando no ayuda a nadie.
+    if (error instanceof SyncError && error.status === 401) {
+      throw new SyncError(401, 'la contraseña no es la del servidor')
+    }
+    throw error
+  }
   if (typeof cuerpo?.token !== 'string') throw new SyncError(0, 'el servidor no devolvió un token')
   return cuerpo.token
 }

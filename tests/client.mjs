@@ -120,6 +120,12 @@ try {
     check('y lo explica en castellano', /volver a entrar/.test(fallo.message), fallo.message)
   })
 
+  /* ------------------------------------------------- contraseña incorrecta */
+  const malaClave = await login(url, CLAVE + 'x', 'test').catch((e) => e)
+  eq('una contraseña que no es da 401', malaClave.status, 401)
+  check('y habla de la contraseña, no del token',
+    /contraseña/.test(malaClave.message) && !/token/.test(malaClave.message), malaClave.message)
+
   /* ------------------------------------------------------- borrar y propagar */
   await on(dirA, async (db) => {
     api['project.remove'](ids.projectId)
