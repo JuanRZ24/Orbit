@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   DndContext, DragOverlay, PointerSensor, closestCorners, useSensor, useSensors,
   type DragEndEvent, type DragStartEvent
@@ -12,25 +12,66 @@ import { ItemCardBody, SortableCard, type CardItem } from './ItemCard'
 
 type BoardItem = Story | Task | Issue
 
+/** Lo que ocupa una columna: 288 px de ancho más el hueco que la separa. */
+const ANCHO = 288
+const HUECO = 12
+
+/**
+ * Por debajo de tres columnas a la vista, ponerlas en fila deja de servir:
+ * se ven dos y media y el resto vive detrás de un scroll que nadie usa. Ahí
+ * el tablero se apila, que en un monitor vertical es lo natural.
+ */
+const MINIMO = 3 * ANCHO + 2 * HUECO
+
+/** ¿Caben las columnas una al lado de otra en el sitio que hay? */
+function useApilado(): [React.RefObject<HTMLDivElement | null>, boolean] {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [apilado, setApilado] = useState(false)
+
+  useEffect(() => {
+    const nodo = ref.current
+    if (!nodo) return
+    const observer = new ResizeObserver(([entrada]) => {
+      setApilado(entrada.contentRect.width < MINIMO)
+    })
+    observer.observe(nodo)
+    return () => observer.disconnect()
+  }, [])
+
+  return [ref, apilado]
+}
+
 function Column({
-  status, items, children, onQuickAdd, showPoints
+  status, items, children, onQuickAdd, showPoints, apilado
 }: {
   status: Status
   items: BoardItem[]
   children: ReactNode
   onQuickAdd?: (title: string) => void
   showPoints?: boolean
+  apilado?: boolean
 }): ReactNode {
   const { setNodeRef, isOver } = useDroppable({ id: status.id })
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
+  const [plegado, setPlegado] = useState(false)
   const overLimit = status.wipLimit > 0 && items.length > status.wipLimit
+  // Plegar solo tiene sentido apilado: en fila la columna ya ocupa lo suyo.
+  const oculto = Boolean(apilado) && plegado
 
   return (
-    <div className="flex w-72 shrink-0 flex-col">
+    <div className={cn('flex flex-col', apilado ? 'w-full shrink-0' : 'w-72 shrink-0')}>
       <header className="mb-2 flex items-center gap-2 px-1">
         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: status.color }} />
-        <span className="truncate text-[12px] font-semibold uppercase tracking-wide">{status.name}</span>
+        {apilado ? (
+          <button className="truncate text-[12px] font-semibold uppercase tracking-wide hover:text-brand"
+            onClick={() => setPlegado((v) => !v)}
+            title={plegado ? 'Desplegar' : 'Plegar'}>
+            {status.name}
+          </button>
+        ) : (
+          <span className="truncate text-[12px] font-semibold uppercase tracking-wide">{status.name}</span>
+        )}
         <span className={cn('font-mono text-[11px]', overLimit ? 'text-red-400' : 'text-faint')}>
           {items.length}{status.wipLimit > 0 && `/${status.wipLimit}`}
         </span>
@@ -40,7 +81,7 @@ function Column({
         )}
         {onQuickAdd && (
           <button className={cn('rounded p-0.5 text-faint hover:bg-hover hover:text-ink', !showPoints && 'ml-auto')}
-            onClick={() => setAdding(true)} aria-label={`Añadir en ${status.name}`}>
+            onClick={() => { setPlegado(false); setAdding(true) }} aria-label={`Añadir en ${status.name}`}>
             <Plus size={14} />
           </button>
         )}
@@ -49,7 +90,9 @@ function Column({
       <div
         ref={setNodeRef}
         className={cn(
-          'flex min-h-24 flex-1 flex-col gap-2 rounded-xl border border-transparent p-1.5 transition-colors',
+          'flex flex-col gap-2 rounded-xl border border-transparent p-1.5 transition-colors',
+          // Apilado la altura la mandan las tarjetas; en fila, la columna estira.
+          oculto ? 'hidden' : apilado ? 'min-h-0' : 'min-h-24 flex-1',
           isOver && 'border-brand/40 bg-brand/5'
         )}
         style={{ background: isOver ? undefined : alpha(status.color, 4) }}
@@ -112,6 +155,7 @@ export function Board({
   epicAccent?: boolean
 }): ReactNode {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [ref, apilado] = useApilado()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const active = items.find((i) => i.id === activeId)
 
@@ -143,11 +187,12 @@ export function Board({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}
       onDragCancel={() => { setActiveId(null); document.body.classList.remove('dragging-active') }}>
-      <div className="flex h-full gap-3 overflow-x-auto pb-3">
+      <div ref={ref} className={cn('flex h-full gap-3 pb-3',
+        apilado ? 'flex-col overflow-y-auto' : 'overflow-x-auto')}>
         {statuses.map((status) => {
           const columnItems = items.filter((i) => i.statusId === status.id)
           return (
-            <Column key={status.id} status={status} items={columnItems} showPoints={showPoints}
+            <Column key={status.id} status={status} items={columnItems} showPoints={showPoints} apilado={apilado}
               onQuickAdd={onQuickAdd ? (title) => onQuickAdd(status.id, title) : undefined}>
               <SortableContext items={columnItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
                 {columnItems.map((item) => (
