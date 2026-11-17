@@ -4,7 +4,102 @@ import { api } from '../lib/api'
 import { useStore } from '../store/useStore'
 import type { Pendiente } from '../../../shared/types'
 import { Page } from '../components/Page'
-import { cn, formatRelative } from '../lib/ui'
+import { cn } from '../lib/ui'
+
+/** Cuántos días enseña la gráfica. Dos semanas caben sin apretujarse. */
+const DIAS = 14
+
+/**
+ * El día *local* de un sello guardado en UTC.
+ *
+ * No sobra: `doneAt` se guarda en UTC, y lo que marcas hecho por la noche cae
+ * al día siguiente en UTC. Agrupando por la cadena cruda, un pendiente de las
+ * once de la noche del lunes aparecería en el martes.
+ */
+function diaLocal(fecha: Date): string {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+  const dia = String(fecha.getDate()).padStart(2, '0')
+  return `${fecha.getFullYear()}-${mes}-${dia}`
+}
+
+/** Los pendientes hechos, repartidos por el día en que se marcaron. */
+function porDia(hechos: Pendiente[]): Map<string, Pendiente[]> {
+  const mapa = new Map<string, Pendiente[]>()
+  for (const pendiente of hechos) {
+    if (!pendiente.doneAt) continue
+    const dia = diaLocal(new Date(pendiente.doneAt))
+    const ya = mapa.get(dia)
+    if (ya) ya.push(pendiente)
+    else mapa.set(dia, [pendiente])
+  }
+  for (const lista of mapa.values()) {
+    lista.sort((a, b) => String(b.doneAt).localeCompare(String(a.doneAt)))
+  }
+  return mapa
+}
+
+/** Los últimos `n` días hasta hoy, incluidos los que no tienen nada. */
+function ultimosDias(n: number): string[] {
+  const dias: string[] = []
+  for (let atras = n - 1; atras >= 0; atras--) {
+    const fecha = new Date()
+    fecha.setDate(fecha.getDate() - atras)
+    dias.push(diaLocal(fecha))
+  }
+  return dias
+}
+
+const HOY = diaLocal(new Date())
+
+/** «lun 16». El día suelto no basta cuando miras dos semanas atrás. */
+function etiquetaDia(dia: string): string {
+  const fecha = new Date(`${dia}T00:00:00`)
+  return fecha.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' })
+}
+
+function tituloDia(dia: string): string {
+  if (dia === HOY) return 'Hoy'
+  const fecha = new Date(`${dia}T00:00:00`)
+  return fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+const hora = (iso: string): string =>
+  new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+
+/**
+ * La gráfica de las últimas dos semanas: una barra por día, alta en proporción
+ * al día más cargado. Con pocos datos una escala fija dejaría todo raso, así
+ * que el máximo manda.
+ */
+function Grafica({ dias, cuenta }: { dias: string[]; cuenta: Map<string, Pendiente[]> }): ReactNode {
+  const maximo = Math.max(1, ...dias.map((d) => cuenta.get(d)?.length ?? 0))
+
+  return (
+    // `items-stretch` no es adorno: con `items-end` las columnas se encogen a
+    // su contenido, la barra se queda sin altura que repartir y salen rayitas.
+    <div className="flex h-32 items-stretch gap-1.5">
+      {dias.map((dia) => {
+        const n = cuenta.get(dia)?.length ?? 0
+        return (
+          <div key={dia} className="flex h-full flex-1 flex-col items-center gap-1">
+            <span className={cn('text-[10px] font-mono', n ? 'text-faint' : 'text-transparent')}>{n}</span>
+            <div className="flex w-full min-h-0 flex-1 items-end">
+              <div
+                className={cn('w-full rounded-sm transition-all',
+                  n === 0 && 'bg-line/50', dia === HOY ? 'bg-brand' : 'bg-brand/50')}
+                style={{ height: n === 0 ? 2 : `${Math.max(8, (n / maximo) * 100)}%` }}
+                title={`${tituloDia(dia)}: ${n}`}
+              />
+            </div>
+            <span className={cn('text-[10px]', dia === HOY ? 'text-ink' : 'text-faint')}>
+              {etiquetaDia(dia)}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 /**
  * El módulo de pendientes entero: lo que no es de ningún proyecto. Se añaden
@@ -14,7 +109,8 @@ export function Pendientes(): ReactNode {
   const { toast } = useStore()
   const [lista, setLista] = useState<Pendiente[] | null>(null)
   const [texto, setTexto] = useState('')
-  const [verHechos, setVerHechos] = useState(false)
+  // Abierto de entrada: ahora tiene columna propia y es lo que se viene a ver.
+  const [verHechos, setVerHechos] = useState(true)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => { void api.listPendientes(true).then(setLista) }, [])
@@ -51,6 +147,12 @@ export function Pendientes(): ReactNode {
   const abiertos = lista.filter((p) => !p.done)
   const hechos = lista.filter((p) => p.done)
 
+  const cuenta = porDia(hechos)
+  const dias = ultimosDias(DIAS)
+  const enLaQuincena = dias.reduce((suma, d) => suma + (cuenta.get(d)?.length ?? 0), 0)
+  // De mayor a menor: lo de hoy primero, que es lo que uno viene a mirar.
+  const conAlgo = [...cuenta.keys()].sort((a, b) => b.localeCompare(a))
+
   const fila = (pendiente: Pendiente): ReactNode => (
     <li key={pendiente.id}
       className="group flex items-center gap-2.5 rounded-lg border border-line bg-app/40 px-3 py-2">
@@ -68,7 +170,7 @@ export function Pendientes(): ReactNode {
 
       {/* `done` llega como número: sin el Boolean, React pintaría un 0 suelto. */}
       {Boolean(pendiente.done) && pendiente.doneAt && (
-        <span className="text-[11px] text-faint">{formatRelative(pendiente.doneAt)}</span>
+        <span className="font-mono text-[11px] text-faint">{hora(pendiente.doneAt)}</span>
       )}
 
       <button disabled={busy} onClick={() => void borrar(pendiente)}
@@ -81,7 +183,11 @@ export function Pendientes(): ReactNode {
 
   return (
     <Page title="Pendientes" subtitle="Lo de la vida, que no es de ningún proyecto">
-      <div className="max-w-2xl space-y-5">
+      {/* En pantalla ancha, lo abierto y lo hecho van lado a lado: antes todo
+          vivía en una columna estrecha con media ventana vacía al lado. */}
+      <div className={cn('grid items-start gap-5',
+        hechos.length > 0 ? 'max-w-6xl lg:grid-cols-2' : 'max-w-2xl')}>
+        <div className="space-y-5">
         <form onSubmit={(e) => void añadir(e)} className="flex gap-2">
           <input className="field flex-1" placeholder="Añadir un pendiente…" value={texto}
             onChange={(e) => setTexto(e.target.value)} />
@@ -99,18 +205,41 @@ export function Pendientes(): ReactNode {
             <ul className="space-y-1.5">{abiertos.map(fila)}</ul>
           )}
         </section>
+        </div>
 
         {hechos.length > 0 && (
           <section className="card p-4">
-            <button className="flex w-full items-baseline gap-2 text-left text-[14px] font-semibold"
-              onClick={() => setVerHechos((v) => !v)}>
+            <h2 className="mb-1 flex items-baseline gap-2 text-[14px] font-semibold">
               Hechos
-              <span className="text-[12px] font-normal text-faint">{hechos.length}</span>
+              <span className="text-[12px] font-normal text-faint">
+                {enLaQuincena} en {DIAS} días · {hechos.length} en total
+              </span>
+            </h2>
+
+            <Grafica dias={dias} cuenta={cuenta} />
+
+            <button className="mt-4 flex w-full items-baseline gap-2 text-left text-[13px] font-semibold"
+              onClick={() => setVerHechos((v) => !v)}>
+              Qué se hizo cada día
               <span className="ml-auto text-[12px] font-normal text-faint">
                 {verHechos ? 'ocultar' : 'ver'}
               </span>
             </button>
-            {verHechos && <ul className="mt-3 space-y-1.5">{hechos.map(fila)}</ul>}
+
+            {verHechos && (
+              <div className="mt-3 space-y-4">
+                {conAlgo.map((dia) => (
+                  <div key={dia}>
+                    <h3 className="mb-1.5 flex items-baseline gap-2 border-b border-line pb-1
+                      text-[12px] font-semibold first-letter:uppercase">
+                      {tituloDia(dia)}
+                      <span className="font-normal text-faint">{cuenta.get(dia)?.length}</span>
+                    </h3>
+                    <ul className="space-y-1.5">{(cuenta.get(dia) ?? []).map(fila)}</ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </div>
