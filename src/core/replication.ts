@@ -77,6 +77,17 @@ export const REPLICATED: Record<string, Replicated> = {
   pendientes: {
     key: ['id'],
     columns: ['id', 'texto', 'done', 'position', 'createdAt', 'updatedAt', 'doneAt']
+  },
+  rutinas: {
+    key: ['id'],
+    columns: ['id', 'texto', 'activa', 'position', 'createdAt', 'updatedAt']
+  },
+  // Llave compuesta como la de las etiquetas: la marca no tiene id propio, es
+  // el par hábito-día. Va después de `rutinas` para que el volcado inicial
+  // mande los padres primero.
+  rutina_marcas: {
+    key: ['rutinaId', 'dia'],
+    columns: ['rutinaId', 'dia', 'marcadoAt']
   }
 }
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import {
-  Sun, CheckSquare, FolderKanban, LayoutDashboard, ListTodo, Rocket, Columns3, Bug, Layers,
+  Sun, CheckSquare, Repeat, FolderKanban, LayoutDashboard, ListTodo, Rocket, Columns3, Bug, Layers,
   BookText, Settings, Plus, ChevronsUpDown, Search, Keyboard, FolderOpen, PanelLeftClose
 } from 'lucide-react'
 import { useStore, type ModuleName, type ViewName } from '../store/useStore'
@@ -11,7 +11,8 @@ import { Dot, Dropdown, MenuItem, Progress } from './ui'
 const MODULOS: Array<{ module: ModuleName; label: string; icon: ReactNode; key: string }> = [
   { module: 'hoy', label: 'Hoy', icon: <Sun size={16} />, key: 'Ctrl H' },
   { module: 'proyectos', label: 'Proyectos', icon: <FolderKanban size={16} />, key: 'Ctrl 1' },
-  { module: 'pendientes', label: 'Pendientes', icon: <CheckSquare size={16} />, key: 'Ctrl P' }
+  { module: 'pendientes', label: 'Pendientes', icon: <CheckSquare size={16} />, key: 'Ctrl P' },
+  { module: 'rutina', label: 'Rutina', icon: <Repeat size={16} />, key: 'Ctrl R' }
 ]
 
 /** Las vistas de dentro de Proyectos. */

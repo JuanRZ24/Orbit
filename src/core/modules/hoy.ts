@@ -13,6 +13,7 @@
  * la fecha de creación.
  */
 import { getDb } from '../db'
+import { api as rutina } from './rutina'
 import type { Hoy, Pendiente, TareaEnCurso } from '../../shared/types'
 
 /** Cuántos pendientes de vida caben en un día. */
@@ -57,7 +58,9 @@ export const api = {
         0,
         (db.prepare('SELECT count(*) AS n FROM pendientes WHERE done = 0').get() as { n: number }).n - CUANTOS
       ),
-      tarea: tarea ?? (db.prepare(HISTORIA).get() as unknown as TareaEnCurso | undefined) ?? null
+      tarea: tarea ?? (db.prepare(HISTORIA).get() as unknown as TareaEnCurso | undefined) ?? null,
+      // La rutina la resuelve su propio módulo: aquí sólo se pide.
+      rutinas: rutina['rutina.list']()
     }
   }
 }

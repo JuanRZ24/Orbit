@@ -3,7 +3,7 @@ import { api } from '../lib/api'
 import type { ID, ProjectSnapshot, ProjectSummary } from '../../../shared/types'
 
 /** Los módulos de primer nivel. Entre ellos no se comparte nada. */
-export type ModuleName = 'hoy' | 'proyectos' | 'pendientes' | 'ajustes'
+export type ModuleName = 'hoy' | 'proyectos' | 'pendientes' | 'rutina' | 'ajustes'
 
 /** Las vistas de dentro del módulo de proyectos. */
 export type ViewName = 'dashboard' | 'backlog' | 'sprint' | 'kanban' | 'issues' | 'epics' | 'wiki'

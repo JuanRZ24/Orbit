@@ -12,6 +12,7 @@ import { Modal } from './components/ui'
 import { Home } from './views/Home'
 import { Hoy } from './views/Hoy'
 import { Pendientes } from './views/Pendientes'
+import { Rutina } from './views/Rutina'
 import { Dashboard } from './views/Dashboard'
 import { Backlog } from './views/Backlog'
 import { Kanban } from './views/Kanban'
@@ -27,6 +28,7 @@ const SHORTCUTS: Array<[string, string]> = [
   ['Ctrl Shift N', 'Nuevo proyecto'],
   ['Ctrl H', 'Ir a Hoy'],
   ['Ctrl P', 'Ir a Pendientes'],
+  ['Ctrl R', 'Ir a Rutina'],
   ['Ctrl 1 … 7', 'Vistas del proyecto'],
   ['Ctrl B', 'Mostrar u ocultar el panel lateral'],
   ['Esc', 'Cerrar el diálogo abierto'],
@@ -111,6 +113,7 @@ export default function App(): ReactNode {
     if (mod && e.key.toLowerCase() === 'h' && !typing) { e.preventDefault(); setModule('hoy'); return }
     // preventDefault también evita que Chromium abra su diálogo de impresión.
     if (mod && e.key.toLowerCase() === 'p' && !typing) { e.preventDefault(); setModule('pendientes'); return }
+    if (mod && e.key.toLowerCase() === 'r' && !typing) { e.preventDefault(); setModule('rutina'); return }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'n') { e.preventDefault(); setNewProject(true); return }
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'n' && currentId) { e.preventDefault(); setQuickStory(true); return }
     if (mod && !typing && /^[1-7]$/.test(e.key) && currentId) {
@@ -159,6 +162,7 @@ export default function App(): ReactNode {
   const Current =
     module === 'hoy' ? Hoy
       : module === 'pendientes' ? Pendientes
+        : module === 'rutina' ? Rutina
         : module === 'ajustes' ? Settings
           : currentId ? VIEWS[view] : Home
 

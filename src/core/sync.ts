@@ -13,7 +13,7 @@ import { REPLICATED, setApplying, type Change } from './replication'
 
 /** Padres antes que hijos: al aplicar un lote no queremos pelearnos con las claves ajenas. */
 export const ORDER = ['projects', 'statuses', 'epics', 'sprints', 'stories', 'tasks', 'issues', 'wiki',
-  'comments', 'tags', 'activity', 'sprint_history', 'pendientes']
+  'comments', 'tags', 'activity', 'sprint_history', 'pendientes', 'rutinas', 'rutina_marcas']
 
 export interface IncomingChange {
   tbl: string

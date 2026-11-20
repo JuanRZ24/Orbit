@@ -216,6 +216,35 @@ export interface Pendiente {
   doneAt: string | null
 }
 
+/* ------------------------------------------------------------------ rutina */
+
+/** Un hábito de todos los días. */
+export interface Rutina {
+  id: ID
+  texto: string
+  activa: number
+  position: number
+  createdAt: string
+  updatedAt: string
+}
+
+/** El hábito con lo de hoy ya calculado, que es como lo pinta la vista. */
+export interface RutinaHoy extends Rutina {
+  hecha: boolean
+  /** Días seguidos cumpliendo. Hoy sin marcar todavía no la rompe. */
+  racha: number
+  /** Veces cumplido dentro de `ventana` días, hoy incluido. */
+  cumplidos: number
+  ventana: number
+}
+
+/** Un día del historial: cuántos hábitos tocaban y cuántos cayeron. */
+export interface DiaRutina {
+  dia: string
+  hechas: number
+  total: number
+}
+
 /* ---------------------------------------------------------------------- hoy */
 
 export interface TareaEnCurso {
@@ -236,6 +265,8 @@ export interface TareaEnCurso {
 /** Lo único que hay que mirar al empezar el día. */
 export interface Hoy {
   pendientes: Pendiente[]
+  /** Los hábitos de hoy, marcados o no. */
+  rutinas: RutinaHoy[]
   /** Los que están abiertos pero no caben hoy, para saber que hay cola. */
   restantes: number
   tarea: TareaEnCurso | null

@@ -25,6 +25,13 @@ export function Hoy(): ReactNode {
     setBusy(false)
   }
 
+  const marcarRutina = async (id: string): Promise<void> => {
+    setBusy(true)
+    await api.toggleRutina(id)
+    load()
+    setBusy(false)
+  }
+
   const terminarTarea = async (): Promise<void> => {
     const tarea = data?.tarea
     if (!tarea) return
@@ -45,9 +52,41 @@ export function Hoy(): ReactNode {
 
   if (!data) return null
 
+  const faltan = data.rutinas.filter((r) => !r.hecha)
+
   return (
     <Page title="Hoy" subtitle="Dos cosas de la vida y una del trabajo">
       <div className="max-w-2xl space-y-5">
+        {data.rutinas.length > 0 && (
+          <section className="card p-4">
+            <h2 className="mb-3 flex items-baseline gap-2 text-[14px] font-semibold">
+              La rutina
+              <span className="text-[12px] font-normal text-faint">
+                {data.rutinas.length - faltan.length} de {data.rutinas.length}
+              </span>
+              <button className="ml-auto text-[12px] font-normal text-dim underline hover:text-ink"
+                onClick={() => setModule('rutina')}>ver todo</button>
+            </h2>
+            {faltan.length === 0 ? (
+              <p className="text-[12px] text-faint">Toda la rutina de hoy, hecha.</p>
+            ) : (
+              <ul className="flex flex-wrap gap-1.5">
+                {faltan.map((rutina) => (
+                  <li key={rutina.id}>
+                    <button disabled={busy} onClick={() => void marcarRutina(rutina.id)}
+                      className="flex items-center gap-1.5 rounded-lg border border-line bg-app/40 px-2.5 py-1.5
+                        text-[13px] text-dim hover:border-brand/40 hover:text-ink"
+                      title="Marcar hecho hoy">
+                      <Circle size={14} className="shrink-0 text-faint" />
+                      {rutina.texto}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         <section className="card p-4">
           <h2 className="mb-3 text-[14px] font-semibold">De la vida</h2>
           {data.pendientes.length === 0 ? (

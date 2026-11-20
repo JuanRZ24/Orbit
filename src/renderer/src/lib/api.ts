@@ -1,5 +1,6 @@
 import type {
-  Activity, BurndownPoint, Comment, Hoy, Pendiente, Project, ProjectSnapshot, ProjectSummary, ID
+  Activity, BurndownPoint, Comment, DiaRutina, Hoy, Pendiente, Project, ProjectSnapshot, ProjectSummary,
+  Rutina, RutinaHoy, ID
 } from '../../../shared/types'
 
 export interface SearchHit {
@@ -70,6 +71,14 @@ export const api = {
   createPendiente: (texto: string) => call<Pendiente>('pendiente.create', { texto }),
   togglePendiente: (id: ID) => call<Pendiente | undefined>('pendiente.toggle', id),
   removePendiente: (id: ID) => call<void>('pendiente.remove', id),
+
+  listRutinas: () => call<RutinaHoy[]>('rutina.list'),
+  createRutina: (texto: string) => call<Rutina>('rutina.create', { texto }),
+  toggleRutina: (id: ID) => call<RutinaHoy | undefined>('rutina.toggle', id),
+  updateRutina: (id: ID, cambios: { texto?: string; activa?: number }) =>
+    call<Rutina | undefined>('rutina.update', id, cambios),
+  removeRutina: (id: ID) => call<void>('rutina.remove', id),
+  historialRutina: (dias?: number) => call<DiaRutina[]>('rutina.historial', { dias }),
 
   search: (query: string, projectId?: ID) => call<SearchHit[]>('search', query, projectId)
 }

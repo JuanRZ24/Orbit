@@ -125,6 +125,7 @@ function buildMenu(): void {
       submenu: [
         { label: 'Hoy', accelerator: 'CmdOrCtrl+H', click: () => emit('module', 'hoy') },
         { label: 'Pendientes', accelerator: 'CmdOrCtrl+P', click: () => emit('module', 'pendientes') },
+        { label: 'Rutina', accelerator: 'CmdOrCtrl+R', click: () => emit('module', 'rutina') },
         { label: 'Proyectos', click: () => emit('module', 'proyectos') },
         { type: 'separator' },
         { label: 'Resumen', accelerator: 'CmdOrCtrl+1', click: () => emit('view', 'dashboard') },
